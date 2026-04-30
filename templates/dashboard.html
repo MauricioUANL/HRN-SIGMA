@@ -285,6 +285,14 @@
         <i class="fas fa-filter" style="margin-right:6px;"></i>FILTROS
     </div>
     <div class="filter-group">
+        <label class="hrn-label">Año</label>
+        <select class="hrn-select" id="filtroAnio" onchange="aplicarFiltros()" style="width:auto; min-width:110px;">
+            {% for a in anios_disponibles %}
+            <option value="{{ a }}" {% if filtro_anio == a|string %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
         <label class="hrn-label">Mes</label>
         <select class="hrn-select" id="filtroMes" onchange="aplicarFiltros()" style="width:auto; min-width:130px;">
             <option value="">Todos</option>
@@ -292,6 +300,13 @@
             <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>{{ mes }}</option>
             {% endfor %}
         </select>
+    </div>
+    <div class="filter-group" style="flex:1; min-width:200px;">
+        <label class="hrn-label">Búsqueda rápida</label>
+        <input type="text" id="liveSearch" class="hrn-select"
+               placeholder="Supervisor, archivo, mes…"
+               oninput="filtrarTabla()"
+               style="width:100%;">
     </div>
     <div class="filter-group">
         <label class="hrn-label">Área</label>
@@ -343,6 +358,28 @@
     </div>
 </div>
 
+<!-- DETAILED CHARTS -->
+<div class="charts-row" style="grid-template-columns: 1.6fr 1fr;">
+    <div class="hrn-card">
+        <div class="hrn-card-header">
+            <h5><i class="fas fa-chart-line" style="color:var(--green);margin-right:8px;"></i>Tendencia mensual</h5>
+            <span class="subtitle">{{ filtro_anio }} · entregas vs revisados</span>
+        </div>
+        <div class="chart-canvas-wrap" style="height:280px;">
+            <canvas id="chartTrend"></canvas>
+        </div>
+    </div>
+    <div class="hrn-card">
+        <div class="hrn-card-header">
+            <h5><i class="fas fa-bullseye" style="color:var(--orange2);margin-right:8px;"></i>% Cumplimiento por área</h5>
+            <span class="subtitle">revisados / total</span>
+        </div>
+        <div class="chart-canvas-wrap" style="height:280px;">
+            <canvas id="chartCompliance"></canvas>
+        </div>
+    </div>
+</div>
+
 <!-- SUPERVISOR STATS -->
 <div class="hrn-card" style="margin-bottom:24px;">
     <div class="hrn-card-header">
@@ -381,17 +418,18 @@
         <span class="subtitle">{{ entregas|length }} reportes</span>
     </div>
     <div style="overflow-x:auto;">
-        <table class="hrn-table">
+        <table class="hrn-table" id="tablaEntregas">
             <thead>
                 <tr>
                     <th style="padding-left:20px;">Supervisor / Área</th>
                     <th>Mes</th>
+                    <th>Año</th>
                     <th>Archivo</th>
                     <th style="text-align:center;">Estatus</th>
                     <th style="text-align:center; padding-right:20px;">Acciones</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tbodyEntregas">
                 {% for e in entregas %}
                 <tr>
                     <td style="padding-left:20px;">
@@ -408,6 +446,7 @@
                         </div>
                     </td>
                     <td style="font-family:var(--mono);font-size:12.5px;color:var(--muted2);">{{ e.month }}</td>
+                    <td style="font-family:var(--mono);font-size:12.5px;color:var(--muted2);">{{ e.year or '—' }}</td>
                     <td>
                         <a href="{{ url_for('download_file', filename=e.filename) }}" style="text-decoration:none;display:flex;align-items:center;gap:7px;color:var(--muted2);font-size:12.5px;" title="{{ e.filename }}">
                             <i class="fas fa-file-excel" style="color:#22c55e;font-size:14px;"></i>
@@ -441,8 +480,8 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr>
-                    <td colspan="5">
+                <tr id="emptyRow">
+                    <td colspan="6">
                         <div class="empty-state">
                             <i class="fas fa-inbox"></i>
                             <p>No hay reportes{% if filtro_mes or filtro_area or filtro_estado %} con los filtros seleccionados{% endif %}</p>
@@ -450,6 +489,14 @@
                     </td>
                 </tr>
                 {% endfor %}
+                <tr id="noResultsRow" style="display:none;">
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <p>Sin coincidencias para tu búsqueda</p>
+                        </div>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -533,15 +580,19 @@
      data-revisados="{{ entregas|selectattr('status','equalto','Revisado')|list|length }}"
      data-pendientes="{{ entregas|selectattr('status','equalto','Pendiente')|list|length }}"
      data-areas='{{ area_chart_data | tojson }}'
+     data-trend='{{ monthly_trend_data | tojson }}'
+     data-compliance='{{ area_compliance_data | tojson }}'
      style="display:none;">
 </div>
 
 <script>
 // ── Leer datos desde atributos HTML (evita conflicto Jinja + JS) ─────
-var chartEl   = document.getElementById('chart-data');
-var revisados = parseInt(chartEl.getAttribute('data-revisados'), 10);
-var pendientes= parseInt(chartEl.getAttribute('data-pendientes'), 10);
-var areaData  = JSON.parse(chartEl.getAttribute('data-areas'));
+var chartEl     = document.getElementById('chart-data');
+var revisados   = parseInt(chartEl.getAttribute('data-revisados'), 10);
+var pendientes  = parseInt(chartEl.getAttribute('data-pendientes'), 10);
+var areaData    = JSON.parse(chartEl.getAttribute('data-areas'));
+var trendData   = JSON.parse(chartEl.getAttribute('data-trend'));
+var complianceData = JSON.parse(chartEl.getAttribute('data-compliance'));
 
 // ── CHART.JS CONFIG ─────────────────────────────────────
 Chart.defaults.color = '#6b7a99';
@@ -615,16 +666,132 @@ new Chart(document.getElementById('chartAreas'), {
     }
 });
 
+// Line — monthly trend
+new Chart(document.getElementById('chartTrend'), {
+    type: 'line',
+    data: {
+        labels: trendData.labels,
+        datasets: [
+            {
+                label: 'Total entregas',
+                data: trendData.totales,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,.15)',
+                tension: .3,
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 3,
+            },
+            {
+                label: 'Revisados',
+                data: trendData.revisados,
+                borderColor: '#22a05b',
+                backgroundColor: 'rgba(34,160,91,.15)',
+                tension: .3,
+                fill: false,
+                borderWidth: 2,
+                pointRadius: 3,
+            },
+            {
+                label: 'Pendientes',
+                data: trendData.pendientes,
+                borderColor: '#d4a017',
+                backgroundColor: 'rgba(212,160,23,.15)',
+                tension: .3,
+                fill: false,
+                borderWidth: 2,
+                pointRadius: 3,
+                borderDash: [5, 4],
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { padding: 14, boxWidth: 10 } } },
+        scales: {
+            x: { grid: { color: 'rgba(42,48,69,.5)' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: 'rgba(42,48,69,.5)' }, ticks: { stepSize: 1 }, beginAtZero: true }
+        }
+    }
+});
+
+// Radar — % cumplimiento por área
+if (complianceData.labels && complianceData.labels.length > 0) {
+    new Chart(document.getElementById('chartCompliance'), {
+        type: 'radar',
+        data: {
+            labels: complianceData.labels,
+            datasets: [{
+                label: '% revisados',
+                data: complianceData.porcentajes,
+                backgroundColor: 'rgba(232,118,44,.18)',
+                borderColor: '#e8762c',
+                borderWidth: 2,
+                pointBackgroundColor: '#f59340',
+                pointBorderColor: '#fff',
+                pointRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { padding: 12, boxWidth: 10 } } },
+            scales: {
+                r: {
+                    angleLines: { color: 'rgba(42,48,69,.7)' },
+                    grid: { color: 'rgba(42,48,69,.7)' },
+                    pointLabels: { font: { size: 10 }, color: '#8898bb' },
+                    suggestedMin: 0,
+                    suggestedMax: 100,
+                    ticks: { stepSize: 25, backdropColor: 'transparent', color: '#6b7a99' }
+                }
+            }
+        }
+    });
+}
+
 // ── FILTERS ─────────────────────────────────────────────
 function aplicarFiltros() {
+    const anio   = document.getElementById('filtroAnio').value;
     const mes    = document.getElementById('filtroMes').value;
     const area   = document.getElementById('filtroArea').value;
     const estado = document.getElementById('filtroEstado').value;
     const params = new URLSearchParams();
+    if (anio)   params.set('anio', anio);
     if (mes)    params.set('mes', mes);
     if (area)   params.set('area', area);
     if (estado) params.set('estado', estado);
     window.location.href = '/' + (params.toString() ? '?' + params.toString() : '');
 }
+
+// ── LIVE SEARCH ─────────────────────────────────────────
+function _normalize(s) {
+    return (s || '').toString().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function filtrarTabla() {
+    const q = _normalize(document.getElementById('liveSearch').value).trim();
+    const tbody = document.getElementById('tbodyEntregas');
+    if (!tbody) return;
+    const noResultsRow = document.getElementById('noResultsRow');
+    const emptyRow     = document.getElementById('emptyRow');
+    let visibles = 0;
+    let totalDataRows = 0;
+    Array.from(tbody.children).forEach(function (tr) {
+        if (tr.id === 'noResultsRow' || tr.id === 'emptyRow') return;
+        totalDataRows += 1;
+        const txt = _normalize(tr.innerText);
+        const match = !q || txt.indexOf(q) !== -1;
+        tr.style.display = match ? '' : 'none';
+        if (match) visibles += 1;
+    });
+    if (noResultsRow) {
+        noResultsRow.style.display = (q && visibles === 0 && totalDataRows > 0) ? '' : 'none';
+    }
+    if (emptyRow && q) {
+        emptyRow.style.display = 'none';
+    }
+}
 </script>
-{% endblock %}
+{% endblock %}

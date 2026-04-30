@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block page_title %}Mi Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    .page-header {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .page-header h2 { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 3px; }
+    .page-header p  { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+
+    .kpi-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 14px; margin-bottom: 24px;
+    }
+    .kpi-card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 12px; padding: 18px 20px;
+        position: relative; overflow: hidden;
+    }
+    .kpi-card::after {
+        content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    }
+    .kpi-card.kpi-total::after  { background: var(--blue); }
+    .kpi-card.kpi-pend::after   { background: var(--yellow); }
+    .kpi-card.kpi-rev::after    { background: var(--green); }
+    .kpi-card.kpi-avance::after { background: var(--orange); }
+    .kpi-label {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+        color: var(--muted); font-family: var(--mono); font-weight: 600;
+    }
+    .kpi-value {
+        font-size: 32px; font-weight: 700; color: var(--white);
+        font-family: var(--mono); line-height: 1; margin: 4px 0;
+    }
+    .kpi-card.kpi-pend  .kpi-value { color: #fbbf24; }
+    .kpi-card.kpi-rev   .kpi-value { color: #4ade80; }
+    .kpi-card.kpi-avance .kpi-value { color: var(--orange2); }
+    .kpi-sub { font-size: 11px; color: var(--muted); }
+
+    .filter-bar {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;
+        display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+
+    .chart-canvas-wrap {
+        padding: 20px; height: 300px;
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    .empty-state { padding: 48px 20px; text-align: center; color: var(--muted); }
+    .empty-state i { font-size: 36px; margin-bottom: 12px; opacity: .4; display: block; }
+    .empty-state p { font-size: 13px; }
+
+    @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Hola, {{ current_user.full_name or current_user.username }}</h2>
+        <p>Tu cumplimiento de HRN · Sigma Sabinas · {{ current_user.area or 'Sin área' }}</p>
+    </div>
+    <a href="{{ url_for('upload_hrn') }}" class="btn-hrn btn-primary-hrn">
+        <i class="fas fa-cloud-upload-alt"></i> Subir HRN del mes
+    </a>
+</div>
+
+<!-- Filtro año -->
+<div class="filter-bar">
+    <div style="font-size:12px; color:var(--muted); font-family:var(--mono); margin-right:4px;">
+        <i class="fas fa-calendar" style="margin-right:6px;"></i>AÑO
+    </div>
+    <div class="filter-group">
+        <label class="hrn-label">Periodo</label>
+        <select class="hrn-select" onchange="window.location.href='?anio=' + this.value;" style="width:auto;min-width:120px;">
+            {% for a in anios_disponibles %}
+            <option value="{{ a }}" {% if filtro_anio == a|string %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+    <div class="kpi-card kpi-total">
+        <div class="kpi-label">Mis entregas</div>
+        <div class="kpi-value">{{ total }}</div>
+        <div class="kpi-sub">en {{ filtro_anio }}</div>
+    </div>
+    <div class="kpi-card kpi-rev">
+        <div class="kpi-label">Revisados</div>
+        <div class="kpi-value">{{ revisados }}</div>
+        <div class="kpi-sub">aprobados por subcomité</div>
+    </div>
+    <div class="kpi-card kpi-pend">
+        <div class="kpi-label">Pendientes</div>
+        <div class="kpi-value">{{ pendientes }}</div>
+        <div class="kpi-sub">esperando revisión</div>
+    </div>
+    <div class="kpi-card kpi-avance">
+        <div class="kpi-label">Cumplimiento</div>
+        <div class="kpi-value">{{ cumplimiento }}%</div>
+        <div class="kpi-sub">{{ meses_subidos }}/12 meses cubiertos</div>
+    </div>
+</div>
+
+<!-- Gráfica tendencia -->
+<div class="hrn-card" style="margin-bottom:24px;">
+    <div class="hrn-card-header">
+        <h5><i class="fas fa-chart-line" style="color:var(--green);margin-right:8px;"></i>Mi tendencia mensual</h5>
+        <span class="subtitle">{{ filtro_anio }}</span>
+    </div>
+    <div class="chart-canvas-wrap">
+        <canvas id="chartMiTrend"></canvas>
+    </div>
+</div>
+
+<!-- Lista de entregas -->
+<div class="hrn-card" style="margin-bottom:24px;">
+    <div class="hrn-card-header">
+        <h5><i class="fas fa-list-alt" style="color:var(--muted);margin-right:8px;"></i>Mis reportes</h5>
+        <span class="subtitle">{{ total }} entrega(s)</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="hrn-table">
+            <thead>
+                <tr>
+                    <th style="padding-left:20px;">Mes</th>
+                    <th>Año</th>
+                    <th>Archivo</th>
+                    <th style="text-align:center;">Estatus</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in mis_entregas %}
+                <tr>
+                    <td style="padding-left:20px; font-family:var(--mono); font-size:12.5px; color:var(--muted2);">{{ e.month }}</td>
+                    <td style="font-family:var(--mono); font-size:12.5px; color:var(--muted2);">{{ e.year or '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('download_file', filename=e.filename) }}" style="text-decoration:none;display:flex;align-items:center;gap:7px;color:var(--muted2);font-size:12.5px;" title="{{ e.filename }}">
+                            <i class="fas fa-file-excel" style="color:#22c55e;font-size:14px;"></i>
+                            {{ e.filename[:32] }}{% if e.filename|length > 32 %}…{% endif %}
+                        </a>
+                    </td>
+                    <td style="text-align:center;">
+                        {% if e.status == 'Revisado' %}
+                        <span class="badge-status badge-revisado"><i class="fas fa-check-circle"></i> REVISADO</span>
+                        {% else %}
+                        <span class="badge-status badge-pendiente"><i class="fas fa-clock"></i> PENDIENTE</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Aún no has subido reportes en {{ filtro_anio }}.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="chart-data-sup"
+     data-trend='{{ monthly_trend_data | tojson }}'
+     style="display:none;"></div>
+
+<script>
+Chart.defaults.color = '#6b7a99';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+var trendDataSup = JSON.parse(document.getElementById('chart-data-sup').getAttribute('data-trend'));
+
+new Chart(document.getElementById('chartMiTrend'), {
+    type: 'line',
+    data: {
+        labels: trendDataSup.labels,
+        datasets: [
+            {
+                label: 'Total',
+                data: trendDataSup.totales,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,.18)',
+                tension: .3, fill: true, borderWidth: 2, pointRadius: 3,
+            },
+            {
+                label: 'Revisados',
+                data: trendDataSup.revisados,
+                borderColor: '#22a05b',
+                backgroundColor: 'rgba(34,160,91,.15)',
+                tension: .3, fill: false, borderWidth: 2, pointRadius: 3,
+            },
+            {
+                label: 'Pendientes',
+                data: trendDataSup.pendientes,
+                borderColor: '#d4a017',
+                backgroundColor: 'rgba(212,160,23,.15)',
+                tension: .3, fill: false, borderWidth: 2, pointRadius: 3,
+                borderDash: [5,4],
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { padding: 14, boxWidth: 10 } } },
+        scales: {
+            x: { grid: { color: 'rgba(42,48,69,.5)' }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: 'rgba(42,48,69,.5)' }, ticks: { stepSize: 1 }, beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endblock %}
