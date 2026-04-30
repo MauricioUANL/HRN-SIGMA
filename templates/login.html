@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block page_title %}Acceso{% endblock %}
+{% block content_login %}
+<style>
+    body { display: block !important; }
+    .login-wrap {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: var(--bg);
+    }
+    .login-panel-left {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 60px;
+        position: relative;
+        overflow: hidden;
+    }
+    .login-panel-left::before {
+        content: '';
+        position: absolute;
+        top: -80px; left: -80px;
+        width: 320px; height: 320px;
+        background: radial-gradient(circle, rgba(232,118,44,.18) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .login-panel-left::after {
+        content: '';
+        position: absolute;
+        bottom: -60px; right: -60px;
+        width: 260px; height: 260px;
+        background: radial-gradient(circle, rgba(59,130,246,.1) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .login-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 52px;
+    }
+    .login-brand-icon {
+        width: 48px; height: 48px;
+        background: var(--orange);
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--mono);
+        font-weight: 500;
+        color: #fff;
+        font-size: 15px;
+    }
+    .login-brand-text strong {
+        display: block;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--white);
+    }
+    .login-brand-text span {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-family: var(--mono);
+    }
+    .login-headline {
+        font-size: 38px;
+        font-weight: 700;
+        color: var(--white);
+        line-height: 1.15;
+        margin-bottom: 16px;
+    }
+    .login-headline em {
+        color: var(--orange);
+        font-style: normal;
+    }
+    .login-desc {
+        font-size: 14px;
+        color: var(--muted2);
+        line-height: 1.65;
+        max-width: 340px;
+        margin-bottom: 48px;
+    }
+    .login-stats {
+        display: flex;
+        gap: 28px;
+    }
+    .login-stat {}
+    .login-stat strong {
+        display: block;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--white);
+        font-family: var(--mono);
+    }
+    .login-stat span {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .8px;
+    }
+    .login-divider {
+        width: 32px;
+        height: 1px;
+        background: var(--border2);
+        margin: auto 0;
+    }
+
+    /* RIGHT PANEL */
+    .login-panel-right {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 48px;
+        background: var(--bg);
+    }
+    .login-form-box {
+        width: 100%;
+        max-width: 360px;
+    }
+    .login-form-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--white);
+        margin-bottom: 6px;
+    }
+    .login-form-sub {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 36px;
+    }
+    .form-group { margin-bottom: 20px; }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 13px;
+    }
+    .input-icon-wrap .hrn-input { padding-left: 40px; }
+    .login-submit {
+        width: 100%;
+        padding: 13px;
+        background: var(--orange);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 14.5px;
+        font-weight: 700;
+        font-family: var(--font);
+        cursor: pointer;
+        transition: background .15s, transform .1s;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    .login-submit:hover { background: var(--orange2); }
+    .login-submit:active { transform: scale(.98); }
+
+    .error-alert {
+        background: rgba(207,43,43,.14);
+        border: 1px solid rgba(207,43,43,.35);
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: #f87171;
+        font-size: 12.5px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .login-footer {
+        margin-top: 36px;
+        font-size: 11px;
+        color: var(--muted);
+        text-align: center;
+        font-family: var(--mono);
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .login-wrap { grid-template-columns: 1fr; }
+        .login-panel-left { display: none; }
+        .login-panel-right { padding: 40px 24px; }
+    }
+</style>
+
+<div class="login-wrap">
+    <div class="login-panel-left">
+        <div class="login-brand">
+            <div class="login-brand-icon">HRN</div>
+            <div class="login-brand-text">
+                <strong>SIGMA SABINAS</strong>
+                <span>Disciplina Operativa</span>
+            </div>
+        </div>
+        <h1 class="login-headline">Control de<br><em>Riesgo</em><br>Operacional</h1>
+        <p class="login-desc">
+            Plataforma de gestión y seguimiento de evaluaciones HRN para el Subcomité de Disciplina Operativa.
+        </p>
+        <div class="login-stats">
+            <div class="login-stat">
+                <strong>HRN</strong>
+                <span>Sistema</span>
+            </div>
+            <div class="login-divider"></div>
+            <div class="login-stat">
+                <strong>2026</strong>
+                <span>Ciclo activo</span>
+            </div>
+            <div class="login-divider"></div>
+            <div class="login-stat">
+                <strong>σ</strong>
+                <span>Sigma</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-panel-right">
+        <div class="login-form-box">
+            <h2 class="login-form-title">Iniciar sesión</h2>
+            <p class="login-form-sub">Ingresa tus credenciales de acceso</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% for cat, msg in messages %}
+                <div class="error-alert">
+                    <i class="fas fa-exclamation-triangle"></i> {{ msg }}
+                </div>
+              {% endfor %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label class="hrn-label">Usuario / Nómina</label>
+                    <div class="input-icon-wrap">
+                        <i class="fas fa-user"></i>
+                        <input type="text" name="username" class="hrn-input" placeholder="Número de nómina" required autofocus>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="hrn-label">Contraseña</label>
+                    <div class="input-icon-wrap">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" name="password" class="hrn-input" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <button type="submit" class="login-submit">
+                    Ingresar al Sistema <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                SISTEMA HRN · SIGMA SABINAS · 2026
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content_login %}

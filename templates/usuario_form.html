@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm mx-auto" style="max-width: 500px;">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">{{ titulo }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">Nombre Completo</label>
+                <input type="text" name="full_name" class="form-control" value="{{ user_edit.full_name if user_edit else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Nómina (Usuario)</label>
+                <input type="text" name="username" class="form-control" value="{{ user_edit.username if user_edit else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Contraseña</label>
+                <input type="password" name="password" class="form-control" value="{{ user_edit.password if user_edit else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Rol</label>
+                <select name="role" class="form-select">
+                    <option value="supervisor" {% if user_edit and user_edit.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+                    <option value="subcomite" {% if user_edit and user_edit.role == 'subcomite' %}selected{% endif %}>Subcomité</option>
+                    <option value="admin" {% if user_edit and user_edit.role == 'admin' %}selected{% endif %}>Administrador</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Área</label>
+                <input type="text" name="area" class="form-control" value="{{ user_edit.area if user_edit else '' }}">
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA HRN — Sigma Sabinas</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --bg:       #0b0e14;
+            --surface:  #12161f;
+            --card:     #181d28;
+            --card2:    #1e2535;
+            --border:   #2a3045;
+            --border2:  #3a4460;
+            --orange:   #e8762c;
+            --orange2:  #f59340;
+            --red:      #cf2b2b;
+            --green:    #22a05b;
+            --yellow:   #d4a017;
+            --blue:     #3b82f6;
+            --text:     #dce4f0;
+            --muted:    #6b7a99;
+            --muted2:   #8898bb;
+            --white:    #f0f4ff;
+            --font:     'DM Sans', sans-serif;
+            --mono:     'DM Mono', monospace;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 14px;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* SIDEBAR */
+        #sidebar {
+            width: 240px;
+            min-height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 100;
+            transition: transform .25s ease;
+        }
+        .sidebar-logo {
+            padding: 22px 20px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-icon {
+            width: 38px; height: 38px;
+            background: var(--orange);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--mono);
+            font-weight: 500;
+            color: #fff;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+        .logo-text strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: .5px;
+        }
+        .logo-text span {
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-family: var(--mono);
+        }
+        .sidebar-nav { flex: 1; padding: 16px 0; }
+        .nav-section-label {
+            padding: 12px 20px 6px;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 10px 20px;
+            color: var(--muted2);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 500;
+            transition: background .15s, color .15s;
+            position: relative;
+        }
+        .sidebar-link:hover { background: var(--card2); color: var(--text); }
+        .sidebar-link.active {
+            background: rgba(232,118,44,.12);
+            color: var(--orange2);
+        }
+        .sidebar-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 4px; bottom: 4px;
+            width: 3px;
+            background: var(--orange);
+            border-radius: 0 3px 3px 0;
+        }
+        .sidebar-link i { width: 18px; text-align: center; font-size: 13px; }
+        .notif-badge {
+            margin-left: auto;
+            background: var(--red);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            font-family: var(--mono);
+            padding: 1px 7px;
+            border-radius: 20px;
+            min-width: 20px;
+            text-align: center;
+        }
+        .sidebar-user {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-avatar {
+            width: 32px; height: 32px;
+            background: var(--orange);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .user-info { flex: 1; overflow: hidden; }
+        .user-info strong {
+            display: block;
+            font-size: 12.5px;
+            color: var(--white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-info span {
+            font-size: 10px;
+            color: var(--muted);
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .logout-btn {
+            color: var(--muted);
+            font-size: 14px;
+            text-decoration: none;
+            padding: 4px;
+            transition: color .15s;
+        }
+        .logout-btn:hover { color: var(--red); }
+
+        /* MAIN */
+        #main {
+            margin-left: 240px;
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .topbar {
+            height: 56px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        #menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--muted2);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .topbar-title {
+            font-size: 13px;
+            color: var(--muted);
+            font-family: var(--mono);
+            letter-spacing: .3px;
+        }
+        .topbar-title span { color: var(--orange2); }
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+        .notif-btn {
+            position: relative;
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 34px; height: 34px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--muted2);
+            cursor: pointer;
+            text-decoration: none;
+            transition: border-color .15s, color .15s;
+        }
+        .notif-btn:hover { border-color: var(--orange); color: var(--orange); }
+        .notif-dot {
+            position: absolute;
+            top: 6px; right: 6px;
+            width: 7px; height: 7px;
+            background: var(--red);
+            border-radius: 50%;
+            border: 1.5px solid var(--surface);
+        }
+        .page-content { padding: 28px; flex: 1; }
+        .flash-container { padding: 0 28px; margin-top: 16px; }
+        .flash-msg {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: fadeSlide .3s ease;
+        }
+        .flash-success { background: rgba(34,160,91,.15); border: 1px solid rgba(34,160,91,.3); color: #4ade80; }
+        .flash-danger  { background: rgba(207,43,43,.15); border: 1px solid rgba(207,43,43,.3); color: #f87171; }
+        @keyframes fadeSlide { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+        /* SHARED COMPONENTS */
+        .hrn-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .hrn-card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .hrn-card-header h5 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--white);
+            letter-spacing: .3px;
+            margin: 0;
+        }
+        .hrn-card-header .subtitle { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+        .hrn-table { width: 100%; border-collapse: collapse; }
+        .hrn-table thead tr { background: var(--card2); border-bottom: 1px solid var(--border); }
+        .hrn-table thead th {
+            padding: 10px 16px;
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            font-weight: 600;
+            font-family: var(--mono);
+            white-space: nowrap;
+        }
+        .hrn-table tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+        .hrn-table tbody tr:last-child { border-bottom: none; }
+        .hrn-table tbody tr:hover { background: rgba(255,255,255,.02); }
+        .hrn-table tbody td { padding: 12px 16px; color: var(--text); font-size: 13.5px; }
+        .badge-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            font-family: var(--mono);
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-revisado { background: rgba(34,160,91,.15); color: #4ade80; border: 1px solid rgba(34,160,91,.3); }
+        .badge-pendiente { background: rgba(212,160,23,.12); color: #fbbf24; border: 1px solid rgba(212,160,23,.3); }
+        .btn-hrn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid transparent;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .btn-primary-hrn { background: var(--orange); color: #fff; border-color: var(--orange); }
+        .btn-primary-hrn:hover { background: var(--orange2); border-color: var(--orange2); color: #fff; }
+        .btn-outline-hrn { background: transparent; color: var(--muted2); border-color: var(--border2); }
+        .btn-outline-hrn:hover { background: var(--card2); color: var(--text); border-color: var(--muted); }
+        .btn-success-hrn { background: rgba(34,160,91,.15); color: #4ade80; border-color: rgba(34,160,91,.3); }
+        .btn-success-hrn:hover { background: rgba(34,160,91,.25); color: #4ade80; }
+        .btn-danger-hrn { background: rgba(207,43,43,.12); color: #f87171; border-color: rgba(207,43,43,.25); }
+        .btn-danger-hrn:hover { background: rgba(207,43,43,.22); color: #f87171; }
+        .btn-info-hrn { background: rgba(59,130,246,.12); color: #60a5fa; border-color: rgba(59,130,246,.25); }
+        .btn-info-hrn:hover { background: rgba(59,130,246,.22); color: #60a5fa; }
+        .btn-sm-hrn { padding: 5px 11px; font-size: 11.5px; border-radius: 6px; }
+        .hrn-input, .hrn-select {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 10px 14px;
+            font-size: 13.5px;
+            font-family: var(--font);
+            width: 100%;
+            transition: border-color .15s;
+            outline: none;
+        }
+        .hrn-input:focus, .hrn-select:focus { border-color: var(--orange); }
+        .hrn-input::placeholder { color: var(--muted); }
+        .hrn-select option { background: var(--card2); }
+        .hrn-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            margin-bottom: 6px;
+            font-family: var(--mono);
+        }
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.6);
+            z-index: 99;
+        }
+        @media (max-width: 900px) {
+            #sidebar { transform: translateX(-100%); }
+            #sidebar.open { transform: translateX(0); }
+            #main { margin-left: 0; }
+            #menu-toggle { display: block; }
+            #sidebar-overlay.show { display: block; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+{% if current_user.is_authenticated %}
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">HRN</div>
+        <div class="logo-text">
+            <strong>SIGMA SABINAS</strong>
+            <span>Disciplina Operativa</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Principal</div>
+        <a href="{{ url_for('dashboard') }}" class="sidebar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-pie"></i> Dashboard
+            {% if pendientes_count > 0 %}
+            <span class="notif-badge">{{ pendientes_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ url_for('upload_hrn') }}" class="sidebar-link {% if request.endpoint == 'upload_hrn' %}active{% endif %}">
+            <i class="fas fa-cloud-upload-alt"></i> Subir HRN
+        </a>
+        {% if current_user.role == 'admin' %}
+        <div class="nav-section-label" style="margin-top:8px;">Administración</div>
+        <a href="{{ url_for('lista_usuarios') }}" class="sidebar-link {% if request.endpoint == 'lista_usuarios' %}active{% endif %}">
+            <i class="fas fa-users-cog"></i> Usuarios
+        </a>
+        {% endif %}
+    </nav>
+    <div class="sidebar-user">
+        <div class="user-avatar">{{ current_user.username[0]|upper }}</div>
+        <div class="user-info">
+            <strong>{{ current_user.username }}</strong>
+            <span>{{ current_user.role }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn" title="Cerrar sesión">
+            <i class="fas fa-sign-out-alt"></i>
+        </a>
+    </div>
+</aside>
+
+<div id="main">
+    <header class="topbar">
+        <button id="menu-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <span class="topbar-title">
+            SISTEMA HRN &nbsp;/&nbsp; <span>{% block page_title %}Dashboard{% endblock %}</span>
+        </span>
+        <div class="topbar-right">
+            {% if pendientes_count > 0 %}
+            <a href="{{ url_for('dashboard') }}" class="notif-btn" title="{{ pendientes_count }} reportes pendientes">
+                <i class="fas fa-bell" style="font-size:13px;"></i>
+                <span class="notif-dot"></span>
+            </a>
+            {% endif %}
+            <span style="font-size:11px; color:var(--muted); font-family:var(--mono);">{{ current_user.area or '' }}</span>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-container">
+        {% for cat, msg in messages %}
+          <div class="flash-msg flash-{{ cat }}">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+            {{ msg }}
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    <main class="page-content">{% block content %}{% endblock %}</main>
+</div>
+
+{% else %}
+<div id="main" style="margin-left:0; width:100%;">
+    <main style="padding:0;">{% block content_login %}{% endblock %}</main>
+</div>
+{% endif %}
+
+<script>
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('show');
+}
+</script>
+</body>
+</html>

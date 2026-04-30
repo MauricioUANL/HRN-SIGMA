@@ -1,0 +1,630 @@
+{% extends "base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+    .page-header h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--white);
+        margin-bottom: 3px;
+    }
+    .page-header p { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+
+    /* KPI CARDS */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .kpi-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 2px;
+    }
+    .kpi-card.kpi-total::after  { background: var(--blue); }
+    .kpi-card.kpi-pend::after   { background: var(--yellow); }
+    .kpi-card.kpi-rev::after    { background: var(--green); }
+    .kpi-card.kpi-avance::after { background: var(--orange); }
+    .kpi-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-weight: 600;
+    }
+    .kpi-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--white);
+        font-family: var(--mono);
+        line-height: 1;
+        margin: 4px 0;
+    }
+    .kpi-card.kpi-pend  .kpi-value { color: #fbbf24; }
+    .kpi-card.kpi-rev   .kpi-value { color: #4ade80; }
+    .kpi-card.kpi-avance .kpi-value { color: var(--orange2); }
+    .kpi-sub { font-size: 11px; color: var(--muted); }
+    .kpi-icon {
+        position: absolute;
+        right: 18px; top: 50%;
+        transform: translateY(-50%);
+        font-size: 28px;
+        opacity: .07;
+        color: var(--white);
+    }
+
+    /* FILTERS */
+    .filter-bar {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: flex-end;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+    .filter-bar .hrn-select { padding: 9px 12px; font-size: 13px; }
+    .filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+
+    /* CHARTS ROW */
+    .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 1.6fr;
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .chart-canvas-wrap {
+        padding: 20px;
+        height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .chart-canvas-wrap canvas { max-height: 200px; }
+
+    /* SUPERVISOR STATS */
+    .supervisor-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        padding: 20px;
+    }
+    .supervisor-card {
+        background: var(--card2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        transition: border-color .15s;
+    }
+    .supervisor-card:hover { border-color: var(--border2); }
+    .sup-name {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--white);
+        margin-bottom: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sup-area {
+        font-size: 10px;
+        color: var(--muted);
+        font-family: var(--mono);
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-bottom: 10px;
+    }
+    .sup-progress-bar {
+        height: 4px;
+        background: var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 6px;
+    }
+    .sup-progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: var(--green);
+        transition: width .4s ease;
+    }
+    .sup-progress-fill.pend { background: var(--yellow); }
+    .sup-count { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+    /* RISK MATRIX */
+    .matrix-wrap { overflow-x: auto; }
+    .risk-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    .risk-table thead th {
+        background: var(--card2);
+        border: 1px solid var(--border);
+        padding: 8px 6px;
+        font-size: 9.5px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: var(--muted);
+        font-family: var(--mono);
+        text-align: center;
+        line-height: 1.3;
+        vertical-align: middle;
+        font-weight: normal;
+    }
+    .risk-table tbody th {
+        background: var(--card2);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        font-size: 10px;
+        color: var(--muted2);
+        font-weight: normal;
+        text-align: left;
+        white-space: nowrap;
+        font-family: var(--mono);
+    }
+    .risk-table tbody th .prob-letter {
+        display: inline-block;
+        width: 18px;
+        font-weight: 700;
+        color: var(--text);
+        font-size: 12px;
+    }
+    .risk-cell {
+        border: 1px solid rgba(0,0,0,.2);
+        text-align: center;
+        vertical-align: middle;
+        height: 46px;
+        width: 12%;
+    }
+    .cell-dark-red  { background: #6b0000; }
+    .cell-red       { background: #b00000; }
+    .cell-yellow    { background: #7a5c00; }
+    .cell-green     { background: #0a5c30; }
+    .risk-cell-input {
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: var(--mono);
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        outline: none;
+        -moz-appearance: textfield;
+    }
+    .risk-cell-input::-webkit-outer-spin-button,
+    .risk-cell-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .risk-cell-input:focus { background: rgba(255,255,255,.12); }
+    .risk-cell-value { color: #fff; font-weight: 700; font-family: var(--mono); font-size: 14px; }
+    .cell-yellow .risk-cell-value,
+    .cell-yellow .risk-cell-input { color: #ffe082; }
+
+    /* TABLE */
+    .empty-state {
+        padding: 48px 20px;
+        text-align: center;
+        color: var(--muted);
+    }
+    .empty-state i { font-size: 36px; margin-bottom: 12px; opacity: .4; display: block; }
+    .empty-state p { font-size: 13px; }
+
+    @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .charts-row { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h2>Gestión de HRN</h2>
+        <p>Subcomité de Disciplina Operativa · Sigma Sabinas</p>
+    </div>
+    <a href="{{ url_for('upload_hrn') }}" class="btn-hrn btn-primary-hrn">
+        <i class="fas fa-cloud-upload-alt"></i> Subir HRN
+    </a>
+</div>
+
+<!-- KPI CARDS -->
+<div class="kpi-grid">
+    <div class="kpi-card kpi-total">
+        <div class="kpi-label">Total recibidos</div>
+        <div class="kpi-value">{{ entregas|length }}</div>
+        <div class="kpi-sub">reportes en el sistema</div>
+        <i class="fas fa-folder-open kpi-icon"></i>
+    </div>
+    <div class="kpi-card kpi-pend">
+        <div class="kpi-label">Pendientes</div>
+        <div class="kpi-value">{{ entregas|selectattr('status','equalto','Pendiente')|list|length }}</div>
+        <div class="kpi-sub">requieren revisión</div>
+        <i class="fas fa-clock kpi-icon"></i>
+    </div>
+    <div class="kpi-card kpi-rev">
+        <div class="kpi-label">Revisados</div>
+        <div class="kpi-value">{{ entregas|selectattr('status','equalto','Revisado')|list|length }}</div>
+        <div class="kpi-sub">aprobados por subcomité</div>
+        <i class="fas fa-check-circle kpi-icon"></i>
+    </div>
+    <div class="kpi-card kpi-avance">
+        <div class="kpi-label">Avance</div>
+        <div class="kpi-value">{% if entregas|length > 0 %}{{ ((entregas|selectattr('status','equalto','Revisado')|list|length / entregas|length) * 100)|round(0)|int }}%{% else %}0%{% endif %}</div>
+        <div class="kpi-sub">de revisión completado</div>
+        <i class="fas fa-chart-line kpi-icon"></i>
+    </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-bar">
+    <div style="font-size:12px; color:var(--muted); font-family:var(--mono); margin-right:4px;">
+        <i class="fas fa-filter" style="margin-right:6px;"></i>FILTROS
+    </div>
+    <div class="filter-group">
+        <label class="hrn-label">Mes</label>
+        <select class="hrn-select" id="filtroMes" onchange="aplicarFiltros()" style="width:auto; min-width:130px;">
+            <option value="">Todos</option>
+            {% for mes in ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] %}
+            <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>{{ mes }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label class="hrn-label">Área</label>
+        <select class="hrn-select" id="filtroArea" onchange="aplicarFiltros()" style="width:auto; min-width:160px;">
+            <option value="">Todas</option>
+            {% for area in areas_disponibles %}
+            <option value="{{ area }}" {% if filtro_area == area %}selected{% endif %}>{{ area }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label class="hrn-label">Estado</label>
+        <select class="hrn-select" id="filtroEstado" onchange="aplicarFiltros()" style="width:auto; min-width:140px;">
+            <option value="">Todos</option>
+            <option value="Pendiente" {% if filtro_estado == 'Pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="Revisado" {% if filtro_estado == 'Revisado' %}selected{% endif %}>Revisado</option>
+        </select>
+    </div>
+    <div class="filter-actions">
+        <a href="{{ url_for('dashboard') }}" class="btn-hrn btn-outline-hrn btn-sm-hrn">
+            <i class="fas fa-times"></i> Limpiar
+        </a>
+    </div>
+    {% if filtro_mes or filtro_area or filtro_estado %}
+    <div style="margin-left:auto; font-size:12px; color:var(--muted2); font-family:var(--mono);">
+        {{ entregas|length }} resultado(s)
+    </div>
+    {% endif %}
+</div>
+
+<!-- CHARTS -->
+<div class="charts-row">
+    <div class="hrn-card">
+        <div class="hrn-card-header">
+            <h5><i class="fas fa-chart-donut" style="color:var(--orange);margin-right:8px;"></i>Estatus de reportes</h5>
+        </div>
+        <div class="chart-canvas-wrap">
+            <canvas id="chartStatus"></canvas>
+        </div>
+    </div>
+    <div class="hrn-card">
+        <div class="hrn-card-header">
+            <h5><i class="fas fa-chart-bar" style="color:var(--blue);margin-right:8px;"></i>Reportes por área</h5>
+            <span class="subtitle">entregas recibidas</span>
+        </div>
+        <div class="chart-canvas-wrap" style="height:260px;">
+            <canvas id="chartAreas"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- SUPERVISOR STATS -->
+<div class="hrn-card" style="margin-bottom:24px;">
+    <div class="hrn-card-header">
+        <h5><i class="fas fa-users" style="color:var(--muted);margin-right:8px;"></i>Panel por Supervisor</h5>
+        <span class="subtitle">{{ supervisor_stats|length }} supervisores</span>
+    </div>
+    {% if supervisor_stats %}
+    <div class="supervisor-grid">
+        {% for sup in supervisor_stats %}
+        <div class="supervisor-card">
+            <div class="sup-name">{{ sup.nombre | title }}</div>
+            <div class="sup-area">{{ sup.area }}</div>
+            <div class="sup-progress-bar">
+                <div class="sup-progress-fill {% if sup.revisados == 0 %}pend{% endif %}"
+                     style="width: {% if sup.total > 0 %}{{ (sup.revisados / sup.total * 100)|int }}{% else %}0{% endif %}%">
+                </div>
+            </div>
+            <div class="sup-count">
+                {{ sup.revisados }}/{{ sup.total }} revisados
+                {% if sup.pendientes > 0 %}
+                &nbsp;·&nbsp;<span style="color:#fbbf24;">{{ sup.pendientes }} pend.</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fas fa-users"></i><p>Sin datos de supervisores aún</p></div>
+    {% endif %}
+</div>
+
+<!-- SUBMISSIONS TABLE -->
+<div class="hrn-card" style="margin-bottom:24px;">
+    <div class="hrn-card-header">
+        <h5><i class="fas fa-list-alt" style="color:var(--muted);margin-right:8px;"></i>Registros recibidos</h5>
+        <span class="subtitle">{{ entregas|length }} reportes</span>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="hrn-table">
+            <thead>
+                <tr>
+                    <th style="padding-left:20px;">Supervisor / Área</th>
+                    <th>Mes</th>
+                    <th>Archivo</th>
+                    <th style="text-align:center;">Estatus</th>
+                    <th style="text-align:center; padding-right:20px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entregas %}
+                <tr>
+                    <td style="padding-left:20px;">
+                        <div style="display:flex; align-items:center; gap:11px;">
+                            <div style="width:34px;height:34px;border-radius:50%;background:var(--card2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--orange2);flex-shrink:0;">
+                                {{ e.supervisor_name[0]|upper }}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;color:var(--white);font-size:13.5px;">{{ e.supervisor_name|title }}</div>
+                                <div style="font-size:10.5px;color:var(--muted);font-family:var(--mono);margin-top:1px;">
+                                    {{ e.filename.split('_')[1] if '_' in e.filename else '—' }}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="font-family:var(--mono);font-size:12.5px;color:var(--muted2);">{{ e.month }}</td>
+                    <td>
+                        <a href="{{ url_for('download_file', filename=e.filename) }}" style="text-decoration:none;display:flex;align-items:center;gap:7px;color:var(--muted2);font-size:12.5px;" title="{{ e.filename }}">
+                            <i class="fas fa-file-excel" style="color:#22c55e;font-size:14px;"></i>
+                            {{ e.filename[:22] }}{% if e.filename|length > 22 %}…{% endif %}
+                        </a>
+                    </td>
+                    <td style="text-align:center;">
+                        {% if e.status == 'Revisado' %}
+                        <span class="badge-status badge-revisado"><i class="fas fa-check-circle"></i> REVISADO</span>
+                        {% else %}
+                        <span class="badge-status badge-pendiente"><i class="fas fa-clock"></i> PENDIENTE</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:center; padding-right:20px;">
+                        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                            {% if current_user.role in ['admin','subcomite'] and e.status == 'Pendiente' %}
+                            <a href="{{ url_for('review_hrn', id=e.id) }}" class="btn-hrn btn-success-hrn btn-sm-hrn" title="Aprobar">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            {% endif %}
+                            {% if current_user.role == 'admin' %}
+                            <a href="{{ url_for('edit_hrn', id=e.id) }}" class="btn-hrn btn-info-hrn btn-sm-hrn" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('delete_hrn', id=e.id) }}" class="btn-hrn btn-danger-hrn btn-sm-hrn" title="Eliminar"
+                               onclick="return confirm('¿Eliminar este reporte?')">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No hay reportes{% if filtro_mes or filtro_area or filtro_estado %} con los filtros seleccionados{% endif %}</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- RISK MATRIX -->
+<div class="hrn-card" style="margin-bottom:32px;">
+    <div class="hrn-card-header">
+        <div>
+            <h5><i class="fas fa-th" style="color:var(--orange);margin-right:8px;"></i>Matriz de Niveles de Riesgo (HRN)</h5>
+            <span class="subtitle" style="margin-top:3px;display:block;">Consolidado de evaluaciones · Probabilidad × Consecuencia</span>
+        </div>
+        <!-- Legend -->
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:10px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:5px;">
+                <span style="width:10px;height:10px;background:#6b0000;border-radius:2px;display:inline-block;"></span>Crítico
+            </span>
+            <span style="font-size:10px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:5px;">
+                <span style="width:10px;height:10px;background:#b00000;border-radius:2px;display:inline-block;"></span>Alto
+            </span>
+            <span style="font-size:10px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:5px;">
+                <span style="width:10px;height:10px;background:#7a5c00;border-radius:2px;display:inline-block;"></span>Medio
+            </span>
+            <span style="font-size:10px;font-family:var(--mono);color:var(--muted);display:flex;align-items:center;gap:5px;">
+                <span style="width:10px;height:10px;background:#0a5c30;border-radius:2px;display:inline-block;"></span>Bajo
+            </span>
+        </div>
+    </div>
+    <form action="{{ url_for('guardar_matriz_riesgos') }}" method="POST">
+        <div class="matrix-wrap" style="padding:20px;">
+            <table class="risk-table">
+                <thead>
+                    <tr>
+                        <th style="width:14%; text-align:left; padding-left:12px;">PROBABILIDAD</th>
+                        {% set consecuencias = ["Rasguño / raspadura","Cortadura leve","Fractura menor","Fractura mayor","Pérdida ojo/dedo","Pérdida 2 extremidades","Muerte"] %}
+                        {% for c in consecuencias %}
+                        <th>{{ c }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set probabilidades = ["Imposible","Casi imposible","Alt. improbable","Improbable","Posible","Alguna prob.","Probable","Muy probable","Certero"] %}
+                    {% set letras = ["I","C","A","I","P","A","P","M","C"] %}
+                    {% set row_indices = [8,7,6,5,4,3,2,1,0] %}
+                    {% for ri in row_indices %}
+                    <tr>
+                        <th>
+                            <span class="prob-letter">{{ letras[ri] }}</span>
+                            {{ probabilidades[ri] }}
+                        </th>
+                        {% for col in range(7) %}
+                        {% set css = get_risk_cell_class(ri, col) %}
+                        <td class="risk-cell {% if css == 'celda-roja-oscuro' %}cell-dark-red{% elif css == 'celda-roja-claro' %}cell-red{% elif css == 'celda-amarilla' %}cell-yellow{% else %}cell-green{% endif %}">
+                            {% if current_user.role == 'admin' %}
+                            <input type="number" name="cell_{{ ri }}_{{ col }}"
+                                   value="{{ risk_matrix_data[ri][col] }}"
+                                   class="risk-cell-input" min="0"
+                                   onclick="this.select()">
+                            {% else %}
+                            <span class="risk-cell-value">{{ risk_matrix_data[ri][col] if risk_matrix_data[ri][col] > 0 else '' }}</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if current_user.role == 'admin' %}
+        <div style="padding:0 20px 20px; text-align:right;">
+            <button type="submit" class="btn-hrn btn-primary-hrn">
+                <i class="fas fa-save"></i> Guardar cambios en la matriz
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+{# Pasar datos de Python a JS sin mezclar Jinja dentro de <script> #}
+<div id="chart-data"
+     data-revisados="{{ entregas|selectattr('status','equalto','Revisado')|list|length }}"
+     data-pendientes="{{ entregas|selectattr('status','equalto','Pendiente')|list|length }}"
+     data-areas='{{ area_chart_data | tojson }}'
+     style="display:none;">
+</div>
+
+<script>
+// ── Leer datos desde atributos HTML (evita conflicto Jinja + JS) ─────
+var chartEl   = document.getElementById('chart-data');
+var revisados = parseInt(chartEl.getAttribute('data-revisados'), 10);
+var pendientes= parseInt(chartEl.getAttribute('data-pendientes'), 10);
+var areaData  = JSON.parse(chartEl.getAttribute('data-areas'));
+
+// ── CHART.JS CONFIG ─────────────────────────────────────
+Chart.defaults.color = '#6b7a99';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+// Donut — status
+new Chart(document.getElementById('chartStatus'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Revisados', 'Pendientes'],
+        datasets: [{
+            data: [revisados, pendientes],
+            backgroundColor: ['rgba(34,160,91,.8)', 'rgba(212,160,23,.8)'],
+            borderColor: ['#22a05b','#d4a017'],
+            borderWidth: 1.5,
+            hoverOffset: 6,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        cutout: '68%',
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 16, boxWidth: 12 } }
+        }
+    }
+});
+
+// Bar — by area
+new Chart(document.getElementById('chartAreas'), {
+    type: 'bar',
+    data: {
+        labels: areaData.labels,
+        datasets: [
+            {
+                label: 'Revisados',
+                data: areaData.revisados,
+                backgroundColor: 'rgba(34,160,91,.75)',
+                borderColor: '#22a05b',
+                borderWidth: 1,
+                borderRadius: 4,
+            },
+            {
+                label: 'Pendientes',
+                data: areaData.pendientes,
+                backgroundColor: 'rgba(212,160,23,.65)',
+                borderColor: '#d4a017',
+                borderWidth: 1,
+                borderRadius: 4,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 14, boxWidth: 10 } }
+        },
+        scales: {
+            x: {
+                grid: { color: 'rgba(42,48,69,.6)' },
+                ticks: { maxRotation: 30, font: { size: 10 } }
+            },
+            y: {
+                grid: { color: 'rgba(42,48,69,.6)' },
+                ticks: { stepSize: 1 },
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// ── FILTERS ─────────────────────────────────────────────
+function aplicarFiltros() {
+    const mes    = document.getElementById('filtroMes').value;
+    const area   = document.getElementById('filtroArea').value;
+    const estado = document.getElementById('filtroEstado').value;
+    const params = new URLSearchParams();
+    if (mes)    params.set('mes', mes);
+    if (area)   params.set('area', area);
+    if (estado) params.set('estado', estado);
+    window.location.href = '/' + (params.toString() ? '?' + params.toString() : '');
+}
+</script>
+{% endblock %}
