@@ -5,6 +5,13 @@
         <h4>Editar Registro</h4>
         <form method="POST">
             <div class="mb-3"><label>Mes</label><input type="text" name="month" class="form-control" value="{{ entrega.month }}"></div>
+            <div class="mb-3"><label>Año</label>
+                <select name="year" class="form-select">
+                    {% for a in anios_disponibles %}
+                    <option value="{{ a }}" {% if entrega.year == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="mb-3"><label>Estatus</label><select name="status" class="form-select">
                 <option value="Pendiente" {{'selected' if entrega.status=='Pendiente'}}>Pendiente</option>
                 <option value="Revisado" {{'selected' if entrega.status=='Revisado'}}>Revisado</option>
@@ -13,4 +20,4 @@
         </form>
     </div>
 </div>
-{% endblock %}
+{% endblock %}

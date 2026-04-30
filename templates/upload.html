@@ -19,6 +19,14 @@
                     </select>
                 </div>
                 <div class="mb-4">
+                    <label class="form-label fw-bold">Año</label>
+                    <select name="year" class="form-select form-select-lg">
+                        {% for a in anios_disponibles %}
+                        <option value="{{ a }}" {% if a == anio_actual %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
                     <label class="form-label fw-bold">Documento Excel</label>
                     <input type="file" name="file" class="form-control form-control-lg" accept=".xlsx, .xls" required>
                 </div>
@@ -30,4 +38,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock %}
